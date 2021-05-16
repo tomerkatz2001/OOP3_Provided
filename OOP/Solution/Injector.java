@@ -7,20 +7,6 @@ import java.lang.reflect.*;
 import java.lang.annotation.*;
 import java.util.stream.Collectors;
 
-@Target({ElementType.CONSTRUCTOR,ElementType.FIELD,ElementType.METHOD})
-@Retention({RetentionPolicy.RUNTIME})
-public @interface inject{}
-
-@Target({ElementType.PARAMETER})
-@Retention({RetentionPolicy.RUNTIME})
-public @interface  Named {
-    public String name = null;
-} //TODO: check if need to imp
-
-@Target({ElementType.METHOD})
-@Retention({RetentionPolicy.RUNTIME})
-public @interface Provides{}
-
 
 public class Injector {
 
