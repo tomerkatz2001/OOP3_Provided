@@ -117,6 +117,7 @@ public class Injector {
                 formal_params = filtered_cs.get(0).getParameters();
                 actual_params = fillParams(formal_params, c);
                 try {
+                    filtered_cs.get(0).setAccessible(true);
                     c = filtered_cs.get(0).newInstance(actual_params);//TODO: can be sent ArrayList????
                 } catch (InstantiationException e) {
                     e.printStackTrace();
