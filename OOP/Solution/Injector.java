@@ -82,12 +82,12 @@ public class Injector {
         Constructor<?> constructors[] = clazz.getConstructors();
         Object c = null;
 
-        List<Constructor> filtered_cs =  Arrays.stream(constructors).filter(m -> m.isAnnotationPresent(inject.class)).collect(Collectors.toList());
-        if(filtered_cs.size() > 1){
+        List<Constructor> filtered_cs =  Arrays.stream(constructors).filter(m -> m.isAnnotationPresent(Inject.class)).collect(Collectors.toList());
+        if(filtered_cs.size() > 1){ //more then one constructor is annotated  with "inject"
             throw new MultipleInjectConstructorsException();
         }
-        if(filtered_cs.size() < 1){
-            List<Constructor> cons_with_no_inject=Arrays.stream(constructors).filter(m -> !m.isAnnotationPresent(inject.class)).collect(Collectors.toList());
+        if(filtered_cs.size() < 1){//no constructor is annotated with "inject"
+            List<Constructor> cons_with_no_inject=Arrays.stream(constructors).filter(m -> !m.isAnnotationPresent(Inject.class)).collect(Collectors.toList());
             for (Constructor cwni : cons_with_no_inject){// TODO : check if can be private constructor
                 if(cwni.getParameterCount() == 0){
                     try {
@@ -96,12 +96,10 @@ public class Injector {
                     } catch (Exception e) {} // should not get here
                 }
             }
-            if(c == null){
+            if(c == null){// no zero params constructor was found
                 throw new NoConstructorFoundException();
             }
         }
-
-
 
 //        if(filtered_cs.get(0).getParameterCount() > 0){
 //            throw new NoConstructorFoundException(); // is it?
@@ -114,21 +112,28 @@ public class Injector {
 
 
 
-        try {
+
             if(c == null) {
                 formal_params = filtered_cs.get(0).getParameters();
                 actual_params = fillParams(formal_params, c);
-                c = filtered_cs.get(0).newInstance(actual_params);//TODO: can be sent ArrayList????
+                try {
+                    c = filtered_cs.get(0).newInstance(actual_params);//TODO: can be sent ArrayList????
+                } catch (InstantiationException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                } catch (InvocationTargetException e) {
+                    e.printStackTrace();
+                }
             }
-        } catch (Exception e) {// TODO: throw the right exception
-            throw new NoConstructorFoundException();
-        }
 
+    //#####################################end_part_one#######################################################################
         Method methods[] = clazz.getDeclaredMethods();
-        List<Method> filtered_ms = Arrays.stream(methods).filter(m -> m.isAnnotationPresent(inject.class)).collect(Collectors.toList());
+        List<Method> filtered_ms = Arrays.stream(methods).filter(m -> m.isAnnotationPresent(Inject.class)).collect(Collectors.toList());
 
         for (Method m: filtered_ms) {
             try {
+                m.setAccessible(true);//maybe check if privet before
                 formal_params = m.getParameters();
                 actual_params = fillParams(formal_params, c);
                 m.invoke(c,actual_params);
@@ -136,12 +141,21 @@ public class Injector {
                 throw new NoConstructorFoundException();// should
             }
         }
-
+        final Object f_c=c;
         Field fields[] = c.getClass().getDeclaredFields();
+        Arrays.stream(fields).forEach(f->f.setAccessible(true));
+        for(Field f:fields)
+        {
+            try{
+                f.set(c,construct(f.getType()));
+            }
+            catch(IllegalAccessException e){}
+            catch (Exception e){
+                throw e;
+            }
+        }
 
-
-
-
+    return f_c;
 
     }
 
@@ -157,6 +171,10 @@ public class Injector {
                 if((p.getAnnotations().length > 0) &&  p.getAnnotation(Named.class) == null){
                     //TODO: check if need to check if there are more than one annotation
                     annotations = p.getAnnotations();
+                    if(annotations.length>2)
+                    {
+                        throw new MultipleAnnotationOnParameterException();
+                    }
                     final Annotation an = annotations[0].annotationType() == Named.class ? annotations[1] : annotations[0];
                     params_methods = Arrays.stream(an.annotationType().getDeclaredMethods()).filter(m -> (m.getAnnotation(Provides.class) != null) && (m.getAnnotation(an.getClass()) != null) && (m.getReturnType() != p.getClass())).collect(Collectors.toList());
                     if(params_methods.size() > 1){
@@ -165,7 +183,9 @@ public class Injector {
                     if(params_methods.size() == 0){
                         throw new NoSuitableProviderFoundException();
                     }
-                    actual_params.add(params_methods.get(0).invoke(c));
+                    try {
+                        actual_params.add(params_methods.get(0).invoke(c));//TODO: maybe to make public before invoke
+                    } catch (Exception e) {}
                 } else{//3
                     actual_params.add(construct(p.getClass()));
                 }
