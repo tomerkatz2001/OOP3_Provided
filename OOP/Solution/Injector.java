@@ -15,10 +15,10 @@ import java.util.stream.Collectors;
 
 public class Injector {
 
-    private HashMap<Class,Class> classToClassBindings;
-    private HashMap<Class,Object> classToInstanceBindings;
-    private HashMap<Class,Supplier> classToSupplierBindings;
-    private HashMap<String,Class> stringToClassBindings;
+    private HashMap<Class<?>,Class<?>> classToClassBindings;
+    private HashMap<Class<?>,Object> classToInstanceBindings;
+    private HashMap<Class<?>,Supplier<?>> classToSupplierBindings;
+    private HashMap<String,Class<?>> stringToClassBindings;
 
     public Injector(){
         this.classToClassBindings = new HashMap<>();
@@ -42,6 +42,8 @@ public class Injector {
             throw new IllegalBindException();
         }
         */
+        //this.classToClassBindings.remove(clazz);
+        //this.classToSupplierBindings.remove(clazz);
         if(clazz1.isAssignableFrom(clazz2)){// clazz2 inherit clazz1
             this.classToInstanceBindings.remove(clazz1);
             this.classToSupplierBindings.remove(clazz1);
@@ -135,25 +137,33 @@ public class Injector {
         }
 
         //#####################################end_part_one#######################################################################
-        Method methods[] = clazz.getDeclaredMethods();
+        Method[] methods = clazz.getDeclaredMethods();
         List<Method> filtered_ms = Arrays.stream(methods).filter(m -> m.isAnnotationPresent(Inject.class)).collect(Collectors.toList());
-
+        Parameter[] methods_formal_params;
         for (Method m: filtered_ms) {
             try {
                 m.setAccessible(true);//maybe check if privet before
-                formal_params = m.getParameters();
-                actual_params = fillParams(formal_params, c);
-                m.invoke(c,actual_params);
-            } catch (Exception e) {
+                methods_formal_params = m.getParameters();
+                actual_params = fillParams(methods_formal_params);
+                if(actual_params.size()==0)
+                {
+                    m.invoke(c,null);
+                }
+                else {
+                    m.invoke(c,actual_params);
+                }
+            }
+            catch (Exception e) {
                 throw new NoConstructorFoundException();// should
             }
         }
-        final Object f_c=c;
-        Field fields[] = c.getClass().getDeclaredFields();
-        Arrays.stream(fields).forEach(f->f.setAccessible(true));
+
+        List<Field> fields = Arrays.stream(c.getClass().getDeclaredFields()).filter(f->f.getAnnotation(Inject.class)!=null).collect(Collectors.toList());
+        //sArrays.stream(fields).forEach(f->f.setAccessible(true));
         for(Field f:fields)
         {
             try{
+                f.setAccessible(true);
                 f.set(c,construct(f.getType()));
             }
             catch(IllegalAccessException e){}
@@ -162,14 +172,15 @@ public class Injector {
             }
         }
 
-        return f_c;
+        return c;
 
     }
 
-    private ArrayList<Object> fillParams(Parameter formal_params[], Object c) throws MultipleInjectConstructorsException, NoConstructorFoundException, NoSuitableProviderFoundException, MultipleProvidersException, MultipleAnnotationOnParameterException{
+    private ArrayList<Object> fillParams(Parameter formal_params[]) throws MultipleInjectConstructorsException, NoConstructorFoundException, NoSuitableProviderFoundException, MultipleProvidersException, MultipleAnnotationOnParameterException{
         ArrayList<Object> actual_params = new ArrayList<>();
-        Annotation annotations[];
-        List<Method> params_methods;
+        Annotation[] annotations;
+        Method params_method;
+
 
         for(Parameter p : formal_params) {
             if (p.getAnnotation(Named.class) != null && this.stringToClassBindings.get(p.getAnnotation(Named.class).value()) != null) {//1 TODO: maybe check if more than one named or annotation or something
@@ -177,8 +188,7 @@ public class Injector {
             } else {//2
                 if ((p.getAnnotations().length > 0) && p.getAnnotation(Named.class) == null) {
                     annotations = p.getAnnotations();
-                    if(annotations.length>2)
-                    {
+                    if (annotations.length > 1) {
                         throw new MultipleAnnotationOnParameterException();
                     }
                     Annotation an = annotations[0];
@@ -187,22 +197,24 @@ public class Injector {
                         try {
                             params_method.setAccessible(true);
                             actual_params.add(params_method.invoke(this));
-                        } catch (Exception e) {
-                        }
+                        } catch (Exception e) { }
                     } else {//3
-                        actual_params.add(construct(p.getClass()));
+                        actual_params.add(construct(p.getType()));
                     }
+                }
+                else {
+                    actual_params.add(construct(p.getType()));
                 }
             }
         }
         return actual_params;
     }
-private Method getMethodWithProvide(Annotation an, Class<?> clazz) throws NoSuitableProviderFoundException, MultipleProvidersException {
-        Class o = this.getClass();
+    private Method getMethodWithProvide(Annotation an, Class<?> clazz) throws NoSuitableProviderFoundException, MultipleProvidersException {
+
         List<Method> methods = new ArrayList<>();
         List<Method> methods_temp;
 
-        for(int n = 0;o != Object.class ; o =o.getSuperclass()){
+        for(Class<?> o = this.getClass();o != Object.class ; o =o.getSuperclass()){
             methods_temp = Arrays.stream(o.getDeclaredMethods()).collect(Collectors.toList());
             methods_temp = methods_temp.stream().filter(m -> (m.getAnnotation(Provides.class)!=null)&&m.isAnnotationPresent(an.annotationType())).collect(Collectors.toList());//&&(m.getAnnotation()!=null)
             methods.addAll(methods_temp);
@@ -214,18 +226,17 @@ private Method getMethodWithProvide(Annotation an, Class<?> clazz) throws NoSuit
             return null;
         }
 
-        Object ooo = clazz.getClass();
         methods = methods.stream().filter(m -> m.getReturnType() == clazz).collect(Collectors.toList());
 
-    if(methods.size() == 0){
-        throw new NoSuitableProviderFoundException();
-    }
+        if(methods.size() == 0){
+            throw new NoSuitableProviderFoundException();
+        }
 
-    if(methods.size() > 1){
-        throw  new MultipleProvidersException();
-    }
+        if(methods.size() > 1){
+            throw  new MultipleProvidersException();
+        }
 
-    return methods.get(0);
+        return methods.get(0);
 
     }
 
