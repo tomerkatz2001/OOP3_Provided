@@ -1,7 +1,7 @@
 package OOP.Tests;
 
-import OOP.Solution.Injector;
 import OOP.Solution.Inject;
+import OOP.Solution.Injector;
 import OOP.Solution.Provides;
 
 import java.lang.annotation.ElementType;

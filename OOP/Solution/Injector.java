@@ -1,11 +1,16 @@
 package OOP.Solution;
 import OOP.Provided.*;
-import OOP.Provided.IllegalBindException;
-import java.util.*;
-import java.util.function.Supplier;
+
+import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
-import java.lang.annotation.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+//import OOP.Provided.IllegalBindException;
 
 
 public class Injector {
@@ -49,6 +54,8 @@ public class Injector {
     }
 
     public void bindToInstance(Class clazz, Object obj) throws IllegalBindException{
+
+        // handle bind(A,A) --> need to remove A bindings or something
         if(!clazz.isAssignableFrom(obj.getClass())){// obj inherit from clazz
             throw new IllegalBindException();
         }
@@ -57,7 +64,7 @@ public class Injector {
         this.classToInstanceBindings.put(clazz,obj);
     }
 
-    public void bindToSupplier(Class clazz, Supplier sup){
+    public void bindToSupplier(Class clazz, Supplier sup){//check if the supplier is valid
         this.classToClassBindings.remove(clazz);
         this.classToInstanceBindings.remove(clazz);
         this.classToSupplierBindings.put(clazz,sup);
@@ -79,7 +86,7 @@ public class Injector {
             return (this.classToSupplierBindings.get(clazz)).get();
         }
 
-        Constructor<?> constructors[] = clazz.getConstructors();
+        Constructor<?> constructors[] = clazz.getDeclaredConstructors();//changed
         Object c = null;
 
         List<Constructor> filtered_cs =  Arrays.stream(constructors).filter(m -> m.isAnnotationPresent(Inject.class)).collect(Collectors.toList());
@@ -118,7 +125,7 @@ public class Injector {
                 actual_params = fillParams(formal_params, c);
                 try {
                     filtered_cs.get(0).setAccessible(true);
-                    c = filtered_cs.get(0).newInstance(actual_params);//TODO: can be sent ArrayList????
+                    c = filtered_cs.get(0).newInstance(actual_params.toArray());//TODO: can be sent ArrayList????
                 } catch (InstantiationException e) {
                     e.printStackTrace();
                 } catch (IllegalAccessException e) {
@@ -166,8 +173,8 @@ public class Injector {
         List<Method> params_methods;
 
         for(Parameter p : formal_params) {
-            if(p.getAnnotation(Named.class) != null && this.stringToClassBindings.get(p.getAnnotation(Named.class).name) != null){//1 TODO: maybe check if more than one named or annotation or something
-                actual_params.add(construct(this.stringToClassBindings.get(p.getAnnotation(Named.class).name)));
+            if(p.getAnnotation(Named.class) != null && this.stringToClassBindings.get(p.getAnnotation(Named.class).value()) != null){//1 TODO: maybe check if more than one named or annotation or something
+                actual_params.add(construct(this.stringToClassBindings.get(p.getAnnotation(Named.class).value())));
             }  else{//2
                 if((p.getAnnotations().length > 0) &&  p.getAnnotation(Named.class) == null){
                     //TODO: check if need to check if there are more than one annotation
@@ -177,7 +184,7 @@ public class Injector {
                         throw new MultipleAnnotationOnParameterException();
                     }
                     final Annotation an = annotations[0].annotationType() == Named.class ? annotations[1] : annotations[0];
-                    params_methods = Arrays.stream(an.annotationType().getDeclaredMethods()).filter(m -> (m.getAnnotation(Provides.class) != null) && (m.getAnnotation(an.getClass()) != null) && (m.getReturnType() != p.getClass())).collect(Collectors.toList());
+                    params_methods = Arrays.stream(an.annotationType().getDeclaredMethods()).filter(m -> (m.getAnnotation(Provides.class) != null) && (m.getAnnotation(an.getClass()) != null) && (m.getReturnType() != p.getClass())).collect(Collectors.toList());//TODO:maybe m.getReturnType() != p.getClass()))
                     if(params_methods.size() > 1){
                         throw new MultipleProvidersException();
                     }
