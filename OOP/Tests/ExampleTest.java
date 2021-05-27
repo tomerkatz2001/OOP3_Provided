@@ -1,10 +1,12 @@
 
 package OOP.Tests;
 
-import OOP.Provided.IllegalBindException;
-import OOP.Solution.Injector;
-import OOP.Solution.Inject;
 
+//import OOP.Provided.IllegalBindException;
+
+import OOP.Provided.IllegalBindException;
+import OOP.Solution.Inject;
+import OOP.Solution.Injector;
 import OOP.Solution.Named;
 import OOP.Solution.Provides;
 import org.junit.Test;
@@ -15,7 +17,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.function.Supplier;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

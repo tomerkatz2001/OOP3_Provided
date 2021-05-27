@@ -44,6 +44,12 @@ public class Injector {
         */
         //this.classToClassBindings.remove(clazz);
         //this.classToSupplierBindings.remove(clazz);
+        if(clazz1.equals(clazz2)){
+            this.classToClassBindings.remove(clazz1);
+            this.classToInstanceBindings.remove(clazz1);
+            this.classToSupplierBindings.remove(clazz1);
+            return;
+        }
         if(clazz1.isAssignableFrom(clazz2)){// clazz2 inherit clazz1
             this.classToInstanceBindings.remove(clazz1);
             this.classToSupplierBindings.remove(clazz1);
