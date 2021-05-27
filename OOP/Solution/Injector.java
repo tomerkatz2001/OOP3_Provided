@@ -154,7 +154,7 @@ public class Injector {
                 }
             }
             catch (Exception e) {
-                throw new NoConstructorFoundException();// should
+
             }
         }
 
@@ -196,7 +196,10 @@ public class Injector {
                     if (params_method != null) {
                         try {
                             params_method.setAccessible(true);
-                            actual_params.add(params_method.invoke(this));
+                            Object o=(params_method.invoke(this));
+                            //Object o_cast=p.getType().cast(o);
+
+                            actual_params.add(o);
                         } catch (Exception e) { }
                     } else {//3
                         actual_params.add(construct(p.getType()));
@@ -204,6 +207,10 @@ public class Injector {
                 }
                 else {
                     actual_params.add(construct(p.getType()));
+                    if(p.getType().isInstance(construct(p.getType())))
+                    {
+                        int x=6;
+                    }
                 }
             }
         }
