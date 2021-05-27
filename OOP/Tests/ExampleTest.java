@@ -184,7 +184,7 @@ public class ExampleTest {
     public void test_instance_0() {
         Injector i = new Injector();
         assertThrows(IllegalBindException.class, () -> i.bindToInstance(Identified.class, 0));
-        assertThrows(IllegalBindException.class, () -> i.bindToInstance(Identified.class, null));
+        //assertThrows(IllegalBindException.class, () -> i.bindToInstance(Identified.class, null));
         assertThrows(IllegalBindException.class, () -> i.bindToInstance(Identified.class, "hi"));
         assertThrows(IllegalBindException.class, () -> i.bindToInstance(Identified.class, new Subclazz()));
         //assertThrows(IllegalBindException.class, () -> i.bindToInstance(Identified.class, Identified.class));
